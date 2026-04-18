@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!--
+    This is a CLASS LIBRARY — not a web project.
+    Controllers live here and are discovered by HMS.API via AddApplicationPart().
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HMS.Service.Contracts\HMS.Service.Contracts.csproj" />
+    <ProjectReference Include="..\HMS.Shared\HMS.Shared.csproj" />
+  </ItemGroup>
+</Project>
