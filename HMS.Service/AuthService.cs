@@ -106,14 +106,21 @@ namespace HMS.Service
 
             var doctor = new ApplicationUser
             {
-                FirstName            = dto.FirstName,
-                LastName             = dto.LastName,
-                Email                = dto.Email,
-                UserName             = dto.Email,
-                PhoneNumber          = dto.PhoneNumber,
-                Role                 = UserRole.Doctor,
-                HospitalId           = dto.HospitalId,
-                MedicalLicenseNumber = dto.MedicalLicenseNumber,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Email = dto.Email,
+                UserName = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
+                Role = UserRole.Doctor,
+                HospitalId = dto.HospitalId,
+                DoctorProfile = new DoctorProfile
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = string.Empty, // EF fills this after user is created
+                    HospitalId = dto.HospitalId,
+                    MedicalLicenseNumber = dto.MedicalLicenseNumber,
+                    Specialization = string.Empty,
+                }
             };
 
             var result = await _userManager.CreateAsync(doctor, dto.Password);
