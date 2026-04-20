@@ -22,5 +22,10 @@ namespace HMS.Entities.Models
 
         // Navigation
         public ICollection<ApplicationUser> Staff { get; set; } = new List<ApplicationUser>();
+        public ICollection<Department> Departments { get; set; } = new List<Department>();
+        public ICollection<LabTestCatalogue> LabCatalogue { get; set; } = new List<LabTestCatalogue>();
+
+        // Patients registered HERE (origin hospital)
+        public ICollection<Patient> RegisteredPatients { get; set; } = new List<Patient>();
     }
 }

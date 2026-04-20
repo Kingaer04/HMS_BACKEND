@@ -1,16 +1,5 @@
 namespace HMS.Entities.Enums
 {
-    // ── User Roles ────────────────────────────────────────────────────
-    public enum UserRole
-    {
-        HospitalAdmin,
-        Doctor,
-        Receptionist,
-        LabTechnician,
-        Patient
-    }
-
-    // ── Patient Access ────────────────────────────────────────────────
     public enum AccessLevel
     {
         Open,       // No lock — any authorized staff can view
@@ -23,7 +12,7 @@ namespace HMS.Entities.Enums
         Fingerprint
     }
 
-    // ── Record Types ──────────────────────────────────────────────────
+    // ── Record Types 
     public enum RecordStatus
     {
         Active,
@@ -32,7 +21,7 @@ namespace HMS.Entities.Enums
         Inactive
     }
 
-    // ── Visit / Appointment ───────────────────────────────────────────
+    // ── Visit / Appointment 
     public enum VisitStatus
     {
         CheckedIn,
@@ -64,7 +53,7 @@ namespace HMS.Entities.Enums
         LabOnly
     }
 
-    // ── Notification ──────────────────────────────────────────────────
+    // ── Notification 
     public enum NotificationType
     {
         PatientAssigned,        // Doctor gets this on patient check-in
@@ -85,7 +74,7 @@ namespace HMS.Entities.Enums
         Dismissed
     }
 
-    // ── Payment ───────────────────────────────────────────────────────
+    // ── Payment 
     public enum PaymentStatus
     {
         Pending,
@@ -104,7 +93,7 @@ namespace HMS.Entities.Enums
         NHIS           // National Health Insurance Scheme
     }
 
-    // ── Lab ───────────────────────────────────────────────────────────
+    // ── Lab 
     public enum LabTestStatus
     {
         Requested,

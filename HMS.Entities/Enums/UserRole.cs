@@ -4,6 +4,8 @@ namespace HMS.Entities.Enums
     {
         HospitalAdmin,
         Doctor,
-        Receptionist
+        Receptionist,
+        LabTechnician,
+        Patient
     }
 }

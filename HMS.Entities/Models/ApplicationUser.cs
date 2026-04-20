@@ -14,11 +14,17 @@ namespace HMS.Entities.Models
         public Guid? HospitalId { get; set; }
         public Hospital? Hospital { get; set; }
 
-        // Doctor only
-        public string? MedicalLicenseNumber { get; set; }
-
-        // Refresh token
         public string? RefreshToken { get; set; }
         public DateTime RefreshTokenExpiry { get; set; }
+
+        // Extended profiles — only one set depending on Role
+        public DoctorProfile? DoctorProfile { get; set; }
+        public ReceptionistProfile? ReceptionistProfile { get; set; }
+        public LabTechnicianProfile? LabTechnicianProfile { get; set; }
+
+        // Only set if Role == Patient
+        public Patient? PatientRecord { get; set; }
+
+        public string FullName => $"{FirstName} {LastName}";
     }
 }
