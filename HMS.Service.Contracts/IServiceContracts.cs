@@ -6,6 +6,7 @@ using HMS.Shared.DTOs.Appointment;
 using HMS.Shared.DTOs.Payment;
 using HMS.Shared.DTOs.Notification;
 using HMS.Shared.Responses;
+using HMS.Entities.Enums;
 
 namespace HMS.Service.Contracts
 {
@@ -129,7 +130,7 @@ namespace HMS.Service.Contracts
     public interface INotificationService
     {
         // Send real-time + persist
-        Task SendNotificationAsync(string recipientUserId, NotificationType type, string title, string message, Guid hospitalId, object? payload = null, Guid? relatedVisitId = null, Guid? relatedAppointmentId = null, Guid? relatedPatientId = null);
+        Task SendNotificationAsync(string recipientUserId, Shared.DTOs.Notification.NotificationType type, string title, string message, Guid hospitalId, object? payload = null, Guid? relatedVisitId = null, Guid? relatedAppointmentId = null, Guid? relatedPatientId = null);
 
         // Queries
         Task<ApiResponse<List<NotificationDto>>> GetUserNotificationsAsync(string userId, bool unreadOnly = false);
