@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
-namespace HMS.API.Hubs
+namespace HMS.Service.Hubs
 {
     /// <summary>
     /// SignalR hub for real-time notifications.

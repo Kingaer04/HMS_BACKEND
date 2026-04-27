@@ -1,4 +1,4 @@
-using HMS.API.Hubs;
+using HMS.Service.Hubs;
 using HMS.API.Middleware;
 using HMS.Entities.Models;
 using HMS.LoggerService;
@@ -190,8 +190,8 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "HMS API v1");
         c.RoutePrefix        = "swagger";
         c.DocumentTitle      = "HMS API Documentation";
-        c.DefaultModelsExpandDepth = -1; // Collapse schemas by default
-        c.DisplayRequestDuration   = true;
+        c.DefaultModelsExpandDepth(-1); // Collapse schemas by default
+        c.DisplayRequestDuration();
     });
 }
 

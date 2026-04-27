@@ -5,13 +5,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.SignalR.Core" Version="2.4.3" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Redis" Version="1.2.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.3.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.3.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HMS.Entities\HMS.Entities.csproj" />
+    <ProjectReference Include="..\HMS.Repository\HMS.Repository.csproj" />
     <ProjectReference Include="..\HMS.Service.Contracts\HMS.Service.Contracts.csproj" />
     <ProjectReference Include="..\HMS.Shared\HMS.Shared.csproj" />
   </ItemGroup>
