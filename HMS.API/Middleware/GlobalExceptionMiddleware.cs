@@ -1,3 +1,4 @@
+using HMS.Entities.Exceptions;
 using System.Net;
 using System.Text.Json;
 
@@ -9,7 +10,7 @@ namespace HMS.API.Middleware
         private readonly ILogger<GlobalExceptionMiddleware> _logger;
 
         public GlobalExceptionMiddleware(
-            RequestDelegate                    next,
+            RequestDelegate next,
             ILogger<GlobalExceptionMiddleware> logger)
         {
             _next   = next;
@@ -31,17 +32,29 @@ namespace HMS.API.Middleware
 
         private static Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode  = (int)HttpStatusCode.InternalServerError;
-
-            var response = new
+            var (statusCode, message) = ex switch
             {
-                isSuccess = false,
-                message   = "An unexpected error occurred. Please try again.",
-                detail    = ex.Message  // Remove in production
+                NotFoundException      => (HttpStatusCode.NotFound,            ex.Message),
+                ForbiddenException     => (HttpStatusCode.Forbidden,           ex.Message),
+                RecordLockedException  => (HttpStatusCode.Forbidden,           ex.Message),
+                BusinessRuleException  => (HttpStatusCode.UnprocessableEntity, ex.Message),
+                DuplicateException     => (HttpStatusCode.Conflict,            ex.Message),
+                AuthException          => (HttpStatusCode.Unauthorized,        ex.Message),
+                _                      => (HttpStatusCode.InternalServerError,
+                                           "An unexpected error occurred. Please try again.")
             };
 
-            return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode  = (int)statusCode;
+
+            var response = JsonSerializer.Serialize(new
+            {
+                isSuccess  = false,
+                message,
+                statusCode = (int)statusCode
+            }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+            return context.Response.WriteAsync(response);
         }
     }
 
