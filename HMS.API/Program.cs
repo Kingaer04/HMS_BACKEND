@@ -55,31 +55,38 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
+    // Pass JWT via query string for SignalR WebSocket connections
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-            {
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/hubs"))
                 context.Token = accessToken;
-            }
             return Task.CompletedTask;
         }
     };
 });
 
 builder.Services.AddAuthorization();
+
+// ── SignalR ───────────────────────────────────────────────────────────
 builder.Services.AddSignalR();
 
-// ── Dependency Injection ──────────────────────────────────────────────
+// ── Dependency Injection (All Services) ───────────────────────────────
+
+// Auth & Infrastructure
 builder.Services.AddScoped<ILoggerService, LoggerService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IExtendedAuthService, ExtendedAuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<INhisVerificationService, NhisVerificationService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+
+// Core HMS Logic
 builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IVisitService, VisitService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
@@ -88,17 +95,26 @@ builder.Services.AddScoped<ILabService, LabService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
+// Management & Profile
+builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+
 // ── CORS ──────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("CorsPolicy", policy =>
-        policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" })
+        policy.WithOrigins(
+                builder.Configuration
+                       .GetSection("AllowedOrigins")
+                       .Get<string[]>() ?? new[] { "http://localhost:3000" })
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials());
 });
 
-builder.Services.AddControllers()
+// ── Controllers ───────────────────────────────────────────────────────
+builder.Services
+    .AddControllers()
     .AddApplicationPart(typeof(HMS.Presentation.Controllers.AuthController).Assembly);
 
 // ── Swagger / OpenAPI Documentation ───────────────────────────────────
@@ -111,27 +127,38 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Description = """
             ## 🏥 System Overview
-            A comprehensive backend for Nigerian Healthcare providers built on **Onion Architecture**.
+            Centralized hospital management API for Nigeria — **C# .NET 8**, Onion Architecture.
 
             ---
+
             ### 🧪 Developer Testing Guide
-            
-            **1. Authentication:**
-            * Call the appropriate **Login** endpoint (Hospital/Doctor/Receptionist).
-            * Copy the `token` from the response.
-            * Click the **Authorize** button at the top of this page and enter: `Bearer {your_token}`.
+            1. **Authentication:** Call Login → Copy `token` → **Authorize** button → `Bearer {token}`.
+            2. **SignalR:** Hub at `/hubs/notifications`. Pass token in query: `?access_token=...`
+            3. **Clinical Flow:** Register Patient → Book Appointment → Check-in (Vitals) → Consultation → Billing.
 
-            **2. Clinical Workflow Sequence:**
-            * **Step 1 (Reception):** Register Patient → `POST /api/patients`.
-            * **Step 2 (Booking):** Request Appointment → `POST /api/appointments`.
-            * **Step 3 (Clinical):** Patient Check-in → Record Vitals → `POST /api/visits/{id}/vitals`.
-            * **Step 4 (Consultation):** Doctor Consultation & Lab Orders.
-            * **Step 5 (Billing):** Finalize Invoices & Checkout.
-
-            **3. Real-time Notifications:**
-            * Hub Endpoint: `/hubs/notifications`
-            * For testing via tools like Postman, pass the token in the query string: `?access_token=...`
             ---
+
+            ### Login Endpoints by Role
+            | Role | Endpoint | Credentials |
+            |------|----------|-------------|
+            | Hospital Admin | `POST /api/auth/login/hospital` | UID + Password |
+            | Doctor | `POST /api/auth/login/doctor` | Email + Password |
+            | Receptionist | `POST /api/auth/login/receptionist` | Email + Password |
+            | Patient (App) | `POST /api/auth/login/patient` | Email + Password |
+
+            ---
+
+            ### Medical Record Access Rules
+            | Section | Write | Read |
+            |---------|-------|------|
+            | Vital Signs | Receptionist | All staff |
+            | Doctor Notes | Assigned Doctor | Doctors only |
+            | Lab Results | Lab Technician | Doctor, Admin |
+
+            ---
+
+            ### Mock NHIS UIDs for Testing
+            `NHIS-0001-LG` · `NHIS-0002-AB` · `NHIS-0003-KN`
             """
     });
 
@@ -142,7 +169,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
+        Description = "Enter: Bearer {your JWT token}"
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -157,6 +184,9 @@ builder.Services.AddSwaggerGen(options =>
     });
 
     options.TagActionsBy(api => new[] { api.ActionDescriptor.RouteValues["controller"]! });
+
+    var xml = Path.Combine(AppContext.BaseDirectory, "HMS.Presentation.xml");
+    if (File.Exists(xml)) options.IncludeXmlComments(xml);
 });
 
 var app = builder.Build();
@@ -172,7 +202,7 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "HMS API v1");
         c.RoutePrefix = "swagger";
         c.DocumentTitle = "HMS API Documentation";
-        c.DefaultModelsExpandDepth(-1); // Hides Schemas by default for cleaner UI
+        c.DefaultModelsExpandDepth(-1);
         c.DisplayRequestDuration();
         c.EnableFilter();
     });
