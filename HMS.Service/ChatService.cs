@@ -1,59 +1,94 @@
 ﻿using HMS.Entities.Models;
 using HMS.Repository.Data;
+using HMS.Service.Contracts;
 using Microsoft.EntityFrameworkCore;
 
-public class ChatService : IChatService
+namespace HMS.Service
 {
-    private readonly ApplicationDbContext _context;
-    public ChatService(ApplicationDbContext context) => _context = context;
-
-    public async Task<ChatRoom> CreateOrGetChatRoomAsync(string user1Id, string user2Id, RoomType type, Guid hospitalId)
+    public class ChatService : IChatService
     {
-        var room = await _context.ChatRooms
-            .Include(r => r.Members)
-            .FirstOrDefaultAsync(r => r.Type == type && r.HospitalId == hospitalId &&
-                                     r.Members.Any(m => m.UserId == user1Id) &&
-                                     r.Members.Any(m => m.UserId == user2Id));
+        private readonly ApplicationDbContext _context;
 
-        if (room != null) return room;
-
-        room = new ChatRoom { Id = Guid.NewGuid(), Type = type, HospitalId = hospitalId };
-        room.Members.Add(new ChatRoomMember { UserId = user1Id });
-        room.Members.Add(new ChatRoomMember { UserId = user2Id });
-
-        _context.ChatRooms.Add(room);
-        await _context.SaveChangesAsync();
-        return room;
-    }
-
-    public async Task<ChatMessage> SaveMessageAsync(Guid roomId, string senderId, string senderName, string content)
-    {
-        var msg = new ChatMessage
+        public ChatService(ApplicationDbContext context)
         {
-            Id = Guid.NewGuid(),
-            ChatRoomId = roomId,
-            SenderId = senderId,
-            SenderName = senderName,
-            Content = content,
-            MessageType = "Text"
-        };
-        _context.ChatMessages.Add(msg);
-        await _context.SaveChangesAsync();
-        return msg;
-    }
+            _context = context;
+        }
 
-    public async Task MarkRoomAsReadAsync(Guid roomId, string userId)
-    {
-        var member = await _context.ChatRoomMembers
-            .FirstOrDefaultAsync(m => m.ChatRoomId == roomId && m.UserId == userId);
-        if (member != null)
+        public async Task<ChatRoom> CreateOrGetChatRoomAsync(string userId1, string userId2, RoomType type, Guid hospitalId)
         {
-            member.LastReadAt = DateTime.UtcNow;
+            var room = await _context.ChatRooms
+                .Include(r => r.Members)
+                .FirstOrDefaultAsync(r => r.Type == type &&
+                                         r.HospitalId == hospitalId &&
+                                         r.Members.Any(m => m.UserId == userId1) &&
+                                         r.Members.Any(m => m.UserId == userId2));
+
+            if (room != null) return room;
+
+            room = new ChatRoom
+            {
+                Id = Guid.NewGuid(),
+                Type = type,
+                HospitalId = hospitalId,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                Members = new List<ChatRoomMember>
+                {
+                    new ChatRoomMember { UserId = userId1, UserRole = "Participant" },
+                    new ChatRoomMember { UserId = userId2, UserRole = "Participant" }
+                }
+            };
+
+            _context.ChatRooms.Add(room);
             await _context.SaveChangesAsync();
+            return room;
+        }
+
+        public async Task<ChatMessage> SaveMessageAsync(Guid roomId, string senderId, string senderName, string content)
+        {
+            var msg = new ChatMessage
+            {
+                Id = Guid.NewGuid(),
+                ChatRoomId = roomId,
+                SenderId = senderId,
+                SenderName = senderName,
+                Content = content,
+                MessageType = "Text",
+                IsRead = false,
+                SentAt = DateTime.UtcNow // Matches your ChatEntities.cs
+            };
+
+            _context.ChatMessages.Add(msg);
+            await _context.SaveChangesAsync();
+            return msg;
+        }
+
+        // Implementation for the interface member 'GetMessageHistoryAsync'
+        public async Task<IEnumerable<ChatMessage>> GetMessageHistoryAsync(Guid roomId)
+        {
+            return await _context.ChatMessages
+                .Where(m => m.ChatRoomId == roomId)
+                .OrderBy(m => m.SentAt) // Uses SentAt from your model
+                .ToListAsync();
+        }
+
+        // Implementation for the interface member 'MarkMessagesAsReadAsync'
+        public async Task MarkMessagesAsReadAsync(Guid roomId, string userId)
+        {
+            var unreadMessages = await _context.ChatMessages
+                .Where(m => m.ChatRoomId == roomId &&
+                             m.SenderId != userId &&
+                             !m.IsRead)
+                .ToListAsync();
+
+            if (unreadMessages.Any())
+            {
+                foreach (var msg in unreadMessages)
+                {
+                    msg.IsRead = true;
+                }
+                await _context.SaveChangesAsync();
+            }
         }
     }
-
-    public async Task<IEnumerable<ChatMessage>> GetHistoryAsync(Guid roomId) =>
-        await _context.ChatMessages.Where(m => m.ChatRoomId == roomId)
-            .OrderByDescending(m => m.SentAt).Take(50).ToListAsync();
 }
