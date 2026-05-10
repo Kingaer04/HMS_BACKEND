@@ -1,22 +1,61 @@
 ﻿using HMS.Entities.Models;
-using HMS.Service.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR;
+using HMS.Service.Hubs;
 
 namespace HMS.Presentation.Controllers
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")] // This establishes the /api/Chat route
-    [ApiExplorerSettings(GroupName = "v1")]
     public class ChatController : ControllerBase
     {
         private readonly IChatService _chatService;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public ChatController(IChatService chatService)
+        public ChatController(IChatService chatService, IHubContext<ChatHub> hubContext)
         {
             _chatService = chatService;
+            _hubContext = hubContext;
+        }
+
+        [HttpGet("{roomId}/search")]
+        public async Task<IActionResult> Search(Guid roomId, [FromQuery] string query)
+        {
+            return Ok(await _chatService.SearchMessagesAsync(roomId, query));
+        }
+
+        [HttpPut("messages/{messageId}")]
+        public async Task<IActionResult> EditMessage(Guid messageId, [FromBody] string newContent)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var success = await _chatService.EditMessageAsync(messageId, userId, newContent);
+            if (!success) return BadRequest("Cannot edit read or non-existent message.");
+            return Ok();
+        }
+
+        [HttpDelete("messages/{messageId}")]
+        public async Task<IActionResult> DeleteMessage(Guid messageId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var success = await _chatService.DeleteMessageAsync(messageId, userId);
+            return success ? NoContent() : NotFound();
+        }
+
+        // "Internal Push" via SignalR
+        [HttpPost("{roomId}/notify")]
+        public async Task<IActionResult> SendInternalPush(Guid roomId, [FromBody] string targetUserId, string message)
+        {
+            // Broadcasts to the specific user even if they aren't in the chat room
+            await _hubContext.Clients.User(targetUserId).SendAsync("ReceiveNotification", new
+            {
+                RoomId = roomId,
+                Preview = message,
+                SentAt = DateTime.UtcNow
+            });
+            return Ok();
         }
 
         /// <summary>

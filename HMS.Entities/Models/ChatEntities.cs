@@ -28,11 +28,17 @@
     {
         public Guid Id { get; set; }
         public Guid ChatRoomId { get; set; }
-        public string SenderId { get; set; }
-        public string SenderName { get; set; }
-        public string Content { get; set; }
-        public string MessageType { get; set; } // "Text", "Image", "File"
+        public string SenderId { get; set; } = string.Empty;
+        public string SenderName { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public string MessageType { get; set; } = "Text"; // "Text", "Image", "File"
+
+        // File handling: Stores Base64 for now; can store a URL later
+        public string? FileUrl { get; set; }
+
         public bool IsRead { get; set; }
+        public bool IsDeleted { get; set; } // Feature: Soft Delete
+        public bool IsEdited { get; set; }  // Feature: Edit tracking
         public DateTime SentAt { get; set; } = DateTime.UtcNow;
     }
 }
