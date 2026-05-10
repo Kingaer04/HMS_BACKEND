@@ -86,6 +86,9 @@ builder.Services.AddScoped<INhisVerificationService, NhisVerificationService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Chat & Communication
+builder.Services.AddScoped<IChatService, ChatService>(); // Integrated Chat Service
+
 // Core HMS Logic
 builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IVisitService, VisitService>();
@@ -133,7 +136,7 @@ builder.Services.AddSwaggerGen(options =>
 
             ### 🧪 Developer Testing Guide
             1. **Authentication:** Call Login → Copy `token` → **Authorize** button → `Bearer {token}`.
-            2. **SignalR:** Hub at `/hubs/notifications`. Pass token in query: `?access_token=...`
+            2. **SignalR:** Hubs at `/hubs/notifications` and `/hubs/chat`. Pass token in query: `?access_token=...`
             3. **Clinical Flow:** Register Patient → Book Appointment → Check-in (Vitals) → Consultation → Billing.
 
             ---
@@ -215,6 +218,7 @@ app.UseAuthorization();
 
 // ── Routes ────────────────────────────────────────────────────────────
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat"); // Integrated Chat Hub
 app.MapControllers();
 
 // ── Auto-Migration ────────────────────────────────────────────────────

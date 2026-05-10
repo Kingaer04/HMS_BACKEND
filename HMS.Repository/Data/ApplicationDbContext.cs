@@ -37,9 +37,36 @@ namespace HMS.Repository.Data
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<TemporaryPatientRecord> TemporaryPatientRecords { get; set; }
 
+        // ── Real-Time Chat DbSets ─────────────────────────────────────
+        public DbSet<ChatRoom> ChatRooms { get; set; }
+        public DbSet<ChatRoomMember> ChatRoomMembers { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // ── Chat Configuration ────────────────────────────────────
+            builder.Entity<ChatRoomMember>(e =>
+            {
+                // Composite Key: A user can be in a room only once
+                e.HasKey(cm => new { cm.ChatRoomId, cm.UserId });
+
+                e.HasOne<ChatRoom>()
+                 .WithMany(r => r.Members)
+                 .HasForeignKey(cm => cm.ChatRoomId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<ChatMessage>(e =>
+            {
+                e.HasKey(m => m.Id);
+
+                e.HasOne<ChatRoom>()
+                 .WithMany(r => r.Messages)
+                 .HasForeignKey(m => m.ChatRoomId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
 
             // ── Hospital ──────────────────────────────────────────────
             builder.Entity<Hospital>(e =>
@@ -75,13 +102,11 @@ namespace HMS.Repository.Data
                 e.Property(p => p.LastName).IsRequired().HasMaxLength(100);
                 e.Property(p => p.Country).HasDefaultValue("Nigeria");
 
-                // Patient → OriginHospital (many patients per hospital)
                 e.HasOne(p => p.OriginHospital)
                  .WithMany(h => h.RegisteredPatients)
                  .HasForeignKey(p => p.OriginHospitalId)
                  .OnDelete(DeleteBehavior.Restrict);
 
-                // Patient → ApplicationUser (optional — only if patient uses app)
                 e.HasOne(p => p.User)
                  .WithOne(u => u.PatientRecord)
                  .HasForeignKey<Patient>(p => p.UserId)
@@ -139,7 +164,6 @@ namespace HMS.Repository.Data
                  .HasForeignKey<VitalInfo>(v => v.MedicalRecordId)
                  .OnDelete(DeleteBehavior.Cascade);
 
-                // Ignore computed property — not mapped to DB
                 e.Ignore(v => v.BMI);
             });
 
@@ -175,7 +199,6 @@ namespace HMS.Repository.Data
                  .HasForeignKey(d => d.MedicalRecordId)
                  .OnDelete(DeleteBehavior.Cascade);
 
-                // Ignore computed property
                 e.Ignore(d => d.IsEditable);
             });
 
@@ -210,9 +233,6 @@ namespace HMS.Repository.Data
                  .HasForeignKey(v => v.MedicalRecordId)
                  .OnDelete(DeleteBehavior.Restrict);
 
-                // ── The fix for your error ────────────────────────────
-                // HospitalVisit is the DEPENDENT side — it holds AppointmentId
-                // Appointment is the PRINCIPAL — exists independently
                 e.HasOne(v => v.Appointment)
                  .WithOne(a => a.ResultingVisit)
                  .HasForeignKey<HospitalVisit>(v => v.AppointmentId)
@@ -263,12 +283,10 @@ namespace HMS.Repository.Data
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ── LabTestCatalogue ──────────────────────────────────────────────────
+            // ── LabTestCatalogue ──────────────────────────────────────
             builder.Entity<LabTestCatalogue>(e =>
             {
                 e.HasKey(c => c.Id);
-
-                // Fix decimal warning
                 e.Property(c => c.Price).HasPrecision(18, 2);
 
                 e.HasOne(c => c.Hospital)
@@ -277,15 +295,13 @@ namespace HMS.Repository.Data
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ── Payment ───────────────────────────────────────────────────────────
+            // ── Payment ───────────────────────────────────────────────
             builder.Entity<Payment>(e =>
             {
                 e.HasKey(p => p.Id);
-
                 e.Ignore(p => p.TotalAmount);
                 e.Ignore(p => p.Balance);
 
-                // Fix decimal warnings — specify precision explicitly
                 e.Property(p => p.ConsultationFee).HasPrecision(18, 2);
                 e.Property(p => p.LabFees).HasPrecision(18, 2);
                 e.Property(p => p.MedicationFees).HasPrecision(18, 2);
@@ -305,14 +321,11 @@ namespace HMS.Repository.Data
                  .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ── PaymentLineItem ───────────────────────────────────────────────────
+            // ── PaymentLineItem ───────────────────────────────────────
             builder.Entity<PaymentLineItem>(e =>
             {
                 e.HasKey(l => l.Id);
-
                 e.Ignore(l => l.Total);
-
-                // Fix decimal warning
                 e.Property(l => l.Amount).HasPrecision(18, 2);
 
                 e.HasOne(l => l.Payment)
