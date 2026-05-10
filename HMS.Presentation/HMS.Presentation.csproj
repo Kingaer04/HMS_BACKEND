@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HMS.Repository\HMS.Repository.csproj" />
     <ProjectReference Include="..\HMS.Service.Contracts\HMS.Service.Contracts.csproj" />
     <ProjectReference Include="..\HMS.Shared\HMS.Shared.csproj" />
   </ItemGroup>
