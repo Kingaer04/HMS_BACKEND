@@ -9,6 +9,7 @@ namespace HMS.Presentation.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")] // This establishes the /api/Chat route
+    [ApiExplorerSettings(GroupName = "v1")]
     public class ChatController : ControllerBase
     {
         private readonly IChatService _chatService;
