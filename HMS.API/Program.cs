@@ -87,7 +87,7 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Chat & Communication
-builder.Services.AddScoped<IChatService, ChatService>(); // Integrated Chat Service
+IServiceCollection serviceCollection = builder.Services.AddScoped<IChatService, ChatService>(); // Integrated Chat Service
 
 // Core HMS Logic
 builder.Services.AddScoped<IPatientService, PatientService>();

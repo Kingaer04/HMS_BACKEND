@@ -1,86 +1,66 @@
 ﻿using HMS.Entities.Models;
-using HMS.Repository.Data;
 using HMS.Service.Contracts;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
-namespace HMS.Service
+namespace HMS.Presentation.Controllers
 {
-    public class ChatService : IChatService
+    [Authorize]
+    [ApiController]
+    [Route("api/[controller]")] // This establishes the /api/Chat route
+    public class ChatController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IChatService _chatService;
 
-        public ChatService(ApplicationDbContext context)
+        public ChatController(IChatService chatService)
         {
-            _context = context;
+            _chatService = chatService;
         }
 
-        public async Task<ChatRoom> CreateOrGetChatRoomAsync(string userId1, string userId2, RoomType type, Guid hospitalId)
+        /// <summary>
+        /// Retrieves or creates a chat room between two users for a consultation or internal use.
+        /// </summary>
+        /// <param name="targetUserId">The ID of the user you want to chat with.</param>
+        /// <param name="hospitalId">The current hospital context ID.</param>
+        [HttpPost("rooms/{targetUserId}")]
+        public async Task<IActionResult> GetOrCreateRoom(string targetUserId, [FromQuery] Guid hospitalId)
         {
-            // Note: Updated to match your RoomType enum (Internal, Consultation, Complaint)
-            var room = await _context.ChatRooms
-                .Include(r => r.Members)
-                .FirstOrDefaultAsync(r => r.Type == type &&
-                                         r.HospitalId == hospitalId &&
-                                         r.Members.Any(m => m.UserId == userId1) &&
-                                         r.Members.Any(m => m.UserId == userId2));
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (room != null) return room;
+            if (string.IsNullOrEmpty(currentUserId)) return Unauthorized();
 
-            room = new ChatRoom
-            {
-                Id = Guid.NewGuid(),
-                Type = type,
-                HospitalId = hospitalId,
-                Members = new List<ChatRoomMember>
-                {
-                    new ChatRoomMember { UserId = userId1, UserRole = "Participant" }, // Added UserRole per your model
-                    new ChatRoomMember { UserId = userId2, UserRole = "Participant" }
-                }
-            };
+            // RoomType matches your model: Internal, Consultation, or Complaint
+            var room = await _chatService.CreateOrGetChatRoomAsync(
+                currentUserId,
+                targetUserId,
+                RoomType.Consultation,
+                hospitalId);
 
-            _context.ChatRooms.Add(room);
-            await _context.SaveChangesAsync();
-            return room;
+            return Ok(room);
         }
 
-        public async Task<ChatMessage> SaveMessageAsync(Guid roomId, string senderId, string senderName, string content)
+        /// <summary>
+        /// Retrieves the message history for a specific room, ordered by sent time.
+        /// </summary>
+        [HttpGet("{roomId}/messages")]
+        public async Task<IActionResult> GetMessages(Guid roomId)
         {
-            var msg = new ChatMessage
-            {
-                Id = Guid.NewGuid(),
-                ChatRoomId = roomId,
-                SenderId = senderId,
-                SenderName = senderName,
-                Content = content,
-                SentAt = DateTime.UtcNow, // Matches your ChatEntities.cs
-                IsRead = false,
-                MessageType = "Text"
-            };
-
-            _context.ChatMessages.Add(msg);
-            await _context.SaveChangesAsync();
-            return msg;
+            var messages = await _chatService.GetMessageHistoryAsync(roomId);
+            return Ok(messages);
         }
 
-        public async Task<IEnumerable<ChatMessage>> GetMessageHistoryAsync(Guid roomId)
+        /// <summary>
+        /// Marks all unread messages in a room as read for the current user.
+        /// </summary>
+        [HttpPost("{roomId}/read")]
+        public async Task<IActionResult> MarkAsRead(Guid roomId)
         {
-            return await _context.ChatMessages
-                .Where(m => m.ChatRoomId == roomId)
-                .OrderBy(m => m.SentAt) // Updated from Timestamp to SentAt
-                .ToListAsync();
-        }
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-        public async Task MarkMessagesAsReadAsync(Guid roomId, string userId)
-        {
-            var unread = await _context.ChatMessages
-                .Where(m => m.ChatRoomId == roomId && m.SenderId != userId && !m.IsRead)
-                .ToListAsync();
-
-            if (unread.Any())
-            {
-                foreach (var m in unread) m.IsRead = true;
-                await _context.SaveChangesAsync();
-            }
+            await _chatService.MarkMessagesAsReadAsync(roomId, userId);
+            return NoContent();
         }
     }
 }

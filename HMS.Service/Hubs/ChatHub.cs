@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Collections.Concurrent;
 using System.Security.Claims;
 using HMS.Entities.Models;
+using HMS.Service.Contracts;
 
 namespace HMS.Service.Hubs
 {
